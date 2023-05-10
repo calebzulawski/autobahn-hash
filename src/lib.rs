@@ -1,9 +1,10 @@
 #![feature(portable_simd)]
 
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
+use multiversion::multiversion;
 
 /// A hash instance.
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct AutobahnHash {
     v0: u64x4,
     v1: u64x4,
@@ -11,6 +12,10 @@ pub struct AutobahnHash {
     mul1: u64x4,
 }
 
+/// Allow safe transmuting between vectors
+///
+/// # Safety
+/// Can only be implemented for types that are transmutable.
 unsafe trait SafeTransmute<To>: Sized {
     fn transmute_to(self) -> To {
         unsafe { core::mem::transmute_copy(&self) }
@@ -92,6 +97,7 @@ impl AutobahnHash {
         Self { v0, v1, mul0, mul1 }
     }
 
+    /// Write a packet of data to the hasher.
     pub fn write(&mut self, packet: [u64; 4]) {
         let packet = u64x4::from_array(packet);
         self.v1 += self.mul0 + packet;
@@ -121,6 +127,9 @@ impl AutobahnHash {
         }
     }
 
+    /// Produce a `u64` hash.
+    ///
+    /// The `remainder` bytes must be less than a packet (less than 32 bytes).
     pub fn finish_u64(mut self, remainder: &[u8]) -> u64 {
         self.finish(remainder);
         for _ in 0..4 {
@@ -133,6 +142,10 @@ impl AutobahnHash {
     }
 }
 
+/// Hash a slice with the given key.
+///
+/// This function automatically dispatches to the optimal instruction set.
+#[multiversion(targets = "simd")]
 pub fn hash_u64(bytes: &[u8], key: [u64; 4]) -> u64 {
     let mut hasher = AutobahnHash::new(key);
     let (bytes, remainder) = bytes.split_at(bytes.len() / 32 * 32);
