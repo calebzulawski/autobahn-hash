@@ -24,11 +24,11 @@ unsafe impl SafeTransmute<u64x4> for u32x8 {}
 
 fn zipper_merge(x: u64x4) -> u64x4 {
     const INDEX: [usize; 32] = {
-        let half_index = [7, 8, 6, 9, 13, 10, 4, 11, 0, 15, 1, 14, 5, 2, 12, 3];
+        let half_index = [3, 12, 2, 5, 14, 1, 15, 0, 11, 4, 10, 13, 9, 6, 8, 7];
         let mut index = [0; 32];
         let mut i = 0;
         while i < 32 {
-            index[i] = half_index[i % 16];
+            index[i] = i / 16 * 16 + half_index[i % 16];
             i += 1;
         }
         index
@@ -38,15 +38,9 @@ fn zipper_merge(x: u64x4) -> u64x4 {
     simd_swizzle!(x, INDEX).transmute_to()
 }
 
-fn mul32(x: u64x4, y: u64x4) -> u64x4 {
-    let x: u32x8 = x.transmute_to();
-    let y: u32x8 = y.transmute_to();
-    (x * y).transmute_to()
-}
-
 fn permute(x: u64x4) -> u64x4 {
     let x: u32x8 = x.transmute_to();
-    let x = simd_swizzle!(x, [2, 3, 0, 1, 6, 7, 4, 5]);
+    let x = simd_swizzle!(x, [5, 4, 7, 6, 1, 0, 3, 2]);
     x.transmute_to()
 }
 
@@ -54,13 +48,13 @@ fn remainder(bytes: &[u8]) -> [u8; 32] {
     let mut packet: [u8; 32] = [0u8; 32];
     let size_mod4 = bytes.len() & 3;
     let remaining = bytes.len() & !3;
-    let remainder = &bytes[remaining..];
     let size = bytes.len() as u64;
 
     packet[..remaining].copy_from_slice(&bytes[..remaining]);
     if size & 16 != 0 {
-        packet[28..32].copy_from_slice(&bytes[size_mod4 - 4..size_mod4]);
+        packet[28..32].copy_from_slice(&bytes[remaining + size_mod4 - 4..remaining + size_mod4]);
     } else if size_mod4 != 0 {
+        let remainder = &bytes[remaining..];
         packet[16] = remainder[0];
         packet[16 + 1] = remainder[size_mod4 >> 1];
         packet[16 + 2] = remainder[size_mod4 - 1];
@@ -100,11 +94,10 @@ impl AutobahnHash {
 
     pub fn write(&mut self, packet: [u64; 4]) {
         let packet = u64x4::from_array(packet);
-        self.v1 += packet;
-        self.v1 += self.mul0;
-        self.mul0 ^= mul32(self.v1, self.v0 >> u64x4::splat(32));
+        self.v1 += self.mul0 + packet;
+        self.mul0 ^= (self.v1 & u64x4::splat(0xffff_ffff)) * (self.v0 >> u64x4::splat(32));
         self.v0 += self.mul1;
-        self.mul1 ^= mul32(self.v0, self.v1 >> u64x4::splat(32));
+        self.mul1 ^= (self.v0 & u64x4::splat(0xffff_ffff)) * (self.v1 >> u64x4::splat(32));
         self.v0 += zipper_merge(self.v1);
         self.v1 += zipper_merge(self.v0);
     }
