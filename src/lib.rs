@@ -6,12 +6,18 @@ use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
 use multiversion::multiversion;
 
 /// A hash instance.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AutobahnHasher {
     v0: u64x4,
     v1: u64x4,
     mul0: u64x4,
     mul1: u64x4,
+}
+
+impl Default for AutobahnHasher {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 fn zipper_merge(x: u64x4) -> u64x4 {
