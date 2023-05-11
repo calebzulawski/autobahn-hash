@@ -1,4 +1,5 @@
 #![feature(portable_simd)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
 use multiversion::multiversion;

@@ -5,11 +5,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+std = ["multiversion/std"]
+default = ["std"]
+
 [dependencies]
-multiversion = "0.7"
+multiversion = { version = "0.7", default-features = false }
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = { version = "0.4", default-features = false }
 highway = "1"
 
 [[bench]]
