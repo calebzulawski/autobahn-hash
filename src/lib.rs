@@ -1,9 +1,8 @@
 #![feature(portable_simd)]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "multiversion"), no_std)]
 #![deny(unsafe_code)]
 
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
-use multiversion::multiversion;
 
 /// A hash instance.
 #[derive(Clone, Debug)]
@@ -166,7 +165,7 @@ impl core::hash::Hasher for AutobahnHasher {
 /// Hash a slice with the given key.
 ///
 /// This function automatically dispatches to the optimal instruction set.
-#[multiversion(targets = "simd")]
+#[cfg_attr(feature = "multiversion", multiversion::multiversion(targets = "simd"))]
 pub fn hash_u64(bytes: &[u8], key: [u64; 4]) -> u64 {
     let mut hasher = AutobahnHasher::new_with_key(key);
     let (bytes, remainder) = bytes.split_at(bytes.len() / 32 * 32);
