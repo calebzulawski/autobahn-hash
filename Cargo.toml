@@ -11,6 +11,7 @@ default = ["std"]
 
 [dependencies]
 multiversion = { version = "0.7", default-features = false }
+bytemuck = { version = "1", default-features = false, features = ["nightly_portable_simd"] }
 
 [dev-dependencies]
 criterion = { version = "0.4", default-features = false }

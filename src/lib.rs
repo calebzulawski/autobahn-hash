@@ -1,5 +1,6 @@
 #![feature(portable_simd)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![deny(unsafe_code)]
 
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
 use multiversion::multiversion;
@@ -13,21 +14,6 @@ pub struct AutobahnHash {
     mul1: u64x4,
 }
 
-/// Allow safe transmuting between vectors
-///
-/// # Safety
-/// Can only be implemented for types that are transmutable.
-unsafe trait SafeTransmute<To>: Sized {
-    fn transmute_to(self) -> To {
-        unsafe { core::mem::transmute_copy(&self) }
-    }
-}
-
-unsafe impl SafeTransmute<u8x32> for u64x4 {}
-unsafe impl SafeTransmute<u32x8> for u64x4 {}
-unsafe impl SafeTransmute<u64x4> for u8x32 {}
-unsafe impl SafeTransmute<u64x4> for u32x8 {}
-
 fn zipper_merge(x: u64x4) -> u64x4 {
     const INDEX: [usize; 32] = {
         let half_index = [3, 12, 2, 5, 14, 1, 15, 0, 11, 4, 10, 13, 9, 6, 8, 7];
@@ -40,14 +26,14 @@ fn zipper_merge(x: u64x4) -> u64x4 {
         index
     };
 
-    let x: u8x32 = x.transmute_to();
-    simd_swizzle!(x, INDEX).transmute_to()
+    let x: u8x32 = bytemuck::cast(x);
+    bytemuck::cast(simd_swizzle!(x, INDEX))
 }
 
 fn permute(x: u64x4) -> u64x4 {
-    let x: u32x8 = x.transmute_to();
+    let x: u32x8 = bytemuck::cast(x);
     let x = simd_swizzle!(x, [5, 4, 7, 6, 1, 0, 3, 2]);
-    x.transmute_to()
+    bytemuck::cast(x)
 }
 
 fn remainder(bytes: &[u8]) -> [u8; 32] {
