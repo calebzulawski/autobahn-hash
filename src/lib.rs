@@ -7,7 +7,7 @@ use multiversion::multiversion;
 
 /// A hash instance.
 #[derive(Clone)]
-pub struct AutobahnHash {
+pub struct AutobahnHasher {
     v0: u64x4,
     v1: u64x4,
     mul0: u64x4,
@@ -55,13 +55,13 @@ fn remainder(bytes: &[u8]) -> [u8; 32] {
     packet
 }
 
-impl AutobahnHash {
-    /// Create a new `AutobahnHash`.
+impl AutobahnHasher {
+    /// Create a new `AutobahnHasher`.
     pub fn new() -> Self {
         Self::new_with_key([0; 4])
     }
 
-    /// Create a new `AutobahnHash` with the given key.
+    /// Create a new `AutobahnHasher` with the given key.
     pub fn new_with_key(key: [u64; 4]) -> Self {
         let key = u64x4::from_array(key);
         let mul0 = u64x4::from_array([
@@ -138,7 +138,7 @@ impl AutobahnHash {
     }
 }
 
-impl core::hash::Hasher for AutobahnHash {
+impl core::hash::Hasher for AutobahnHasher {
     fn finish(&self) -> u64 {
         self.clone().finish_u64(&[])
     }
@@ -162,7 +162,7 @@ impl core::hash::Hasher for AutobahnHash {
 /// This function automatically dispatches to the optimal instruction set.
 #[multiversion(targets = "simd")]
 pub fn hash_u64(bytes: &[u8], key: [u64; 4]) -> u64 {
-    let mut hasher = AutobahnHash::new_with_key(key);
+    let mut hasher = AutobahnHasher::new_with_key(key);
     let (bytes, remainder) = bytes.split_at(bytes.len() / 32 * 32);
     for packet in bytes.chunks(32) {
         hasher.write_bytes(packet.try_into().unwrap());
