@@ -61,6 +61,14 @@ fn remainder(bytes: &[u8]) -> [u8; 32] {
     packet
 }
 
+fn modular_reduction(a3_unmasked: u64, a2: u64, a1: u64, a0: u64) -> (u64, u64) {
+    let a3 = a3_unmasked & 0x3fffffffffffffff;
+    (
+        a1 ^ ((a3 << 1) | (a2 >> 63)) ^ ((a3 << 2) | (a2 >> 62)),
+        a0 ^ (a2 << 1) ^ (a2 << 2),
+    )
+}
+
 impl AutobahnHasher {
     /// Create a new `AutobahnHasher`.
     pub fn new() -> Self {
@@ -170,6 +178,33 @@ impl AutobahnHasher {
                 .wrapping_add(self.mul1[3]),
         ]
     }
+
+    /// Produce a 256-bit hash.
+    ///
+    /// The `remainder` bytes must be less than a packet (less than 32 bytes).
+    ///
+    /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
+    /// and permuted into a 32-bit packet.
+    pub fn finish_256(mut self, remainder: &[u8]) -> [u64; 4] {
+        self.finish(remainder);
+        for _ in 0..10 {
+            self.write_packet(permute(self.v0).to_array());
+        }
+
+        let (m1, m0) = modular_reduction(
+            self.v1[1].wrapping_add(self.mul1[1]),
+            self.v1[0].wrapping_add(self.mul1[0]),
+            self.v0[1].wrapping_add(self.mul0[1]),
+            self.v0[0].wrapping_add(self.mul0[0]),
+        );
+        let (m3, m2) = modular_reduction(
+            self.v1[3].wrapping_add(self.mul1[3]),
+            self.v1[2].wrapping_add(self.mul1[2]),
+            self.v0[3].wrapping_add(self.mul0[3]),
+            self.v0[2].wrapping_add(self.mul0[2]),
+        );
+        [m0, m1, m2, m3]
+    }
 }
 
 impl core::hash::Hasher for AutobahnHasher {
@@ -250,4 +285,19 @@ pub fn hash_128(bytes: &[u8], key: [u64; 4]) -> [u64; 2] {
         hasher.write_bytes(packet.try_into().unwrap());
     }
     hasher.finish_128(remainder)
+}
+
+/// Hash a slice with the given key.
+///
+/// With the `multiversion` feature, this function dispatches the optimal instruction set.
+#[cfg(feature = "multiversion")]
+#[cfg_attr(docsrs, doc(cfg(feature = "multiversion")))]
+#[multiversion::multiversion(targets = "simd")]
+pub fn hash_256(bytes: &[u8], key: [u64; 4]) -> [u64; 4] {
+    let mut hasher = AutobahnHasher::new_with_key(key);
+    let (bytes, remainder) = bytes.split_at(bytes.len() / 32 * 32);
+    for packet in bytes.chunks(32) {
+        hasher.write_bytes(packet.try_into().unwrap());
+    }
+    hasher.finish_256(remainder)
 }
