@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-multiversion = ["dep:multiversion"]
+std = []
+multiversion = ["dep:multiversion", "std"]
 default = ["multiversion"]
 
 [dependencies]
@@ -14,8 +15,12 @@ multiversion = { version = "0.7", optional = true }
 bytemuck = { version = "1", default-features = false, features = ["nightly_portable_simd"] }
 
 [dev-dependencies]
-criterion = { version = "0.4", default-features = false }
+criterion = { version = "0.4", default-features = false, features = ["html_reports"] }
 highway = "1"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [[bench]]
 name = "implementation"

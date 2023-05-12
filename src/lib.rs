@@ -1,5 +1,6 @@
 #![feature(portable_simd)]
-#![cfg_attr(not(feature = "multiversion"), no_std)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![deny(unsafe_code)]
 
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
@@ -86,15 +87,19 @@ impl AutobahnHasher {
         Self { v0, v1, mul0, mul1 }
     }
 
-    /// Write a packet of data to the hasher.
-    pub fn write_packet(&mut self, packet: [u64; 4]) {
-        let packet = u64x4::from_array(packet);
+    fn write_simd(&mut self, packet: u64x4) {
         self.v1 += self.mul0 + packet;
         self.mul0 ^= (self.v1 & u64x4::splat(0xffff_ffff)) * (self.v0 >> u64x4::splat(32));
         self.v0 += self.mul1;
         self.mul1 ^= (self.v0 & u64x4::splat(0xffff_ffff)) * (self.v1 >> u64x4::splat(32));
         self.v0 += zipper_merge(self.v1);
         self.v1 += zipper_merge(self.v0);
+    }
+
+    /// Write a packet of data to the hasher.
+    pub fn write_packet(&mut self, packet: [u64; 4]) {
+        let packet = u64x4::from_array(packet);
+        self.write_simd(packet);
     }
 
     /// Write a packet of data to the hasher, in the form of bytes.
@@ -144,10 +149,12 @@ impl AutobahnHasher {
 }
 
 impl core::hash::Hasher for AutobahnHasher {
+    #[inline]
     fn finish(&self) -> u64 {
         self.clone().finish_u64(&[])
     }
 
+    #[inline]
     fn write(&mut self, bytes: &[u8]) {
         // `Hasher` requires calls to be exactly sequenced (e.g. two calls to `write` does not need
         // to be the same as a single call two `write` with the same data concatenated).
@@ -160,12 +167,43 @@ impl core::hash::Hasher for AutobahnHasher {
         packet[..remainder.len()].copy_from_slice(remainder);
         self.write_bytes(packet);
     }
+
+    #[inline]
+    fn write_u8(&mut self, i: u8) {
+        self.write_u64(i as u64);
+    }
+
+    #[inline]
+    fn write_u16(&mut self, i: u16) {
+        self.write_u64(i as u64);
+    }
+
+    #[inline]
+    fn write_u32(&mut self, i: u32) {
+        self.write_u64(i as u64);
+    }
+
+    #[inline]
+    fn write_u64(&mut self, i: u64) {
+        self.write_simd(u64x4::splat(i));
+    }
+
+    #[inline]
+    fn write_usize(&mut self, i: usize) {
+        if core::mem::size_of::<usize>() > 8 {
+            self.write(&i.to_ne_bytes());
+        } else {
+            self.write_u64(i as u64);
+        }
+    }
 }
 
 /// Hash a slice with the given key.
 ///
-/// This function automatically dispatches to the optimal instruction set.
-#[cfg_attr(feature = "multiversion", multiversion::multiversion(targets = "simd"))]
+/// With the `multiversion` feature, this function dispatches the optimal instruction set.
+#[cfg(feature = "multiversion")]
+#[cfg_attr(docsrs, doc(cfg(feature = "multiversion")))]
+#[multiversion::multiversion(targets = "simd")]
 pub fn hash_u64(bytes: &[u8], key: [u64; 4]) -> u64 {
     let mut hasher = AutobahnHasher::new_with_key(key);
     let (bytes, remainder) = bytes.split_at(bytes.len() / 32 * 32);
