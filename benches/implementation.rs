@@ -50,7 +50,7 @@ fn slice(c: &mut Criterion) {
             input.as_ref(),
             |b, input| {
                 b.iter(|| {
-                    black_box(autobahn_hash::hash_u64(black_box(input), black_box(key)));
+                    black_box(autobahn_hash::hash_64(black_box(input), black_box(key)));
                 });
             },
         );
