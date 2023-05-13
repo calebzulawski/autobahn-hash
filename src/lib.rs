@@ -6,6 +6,9 @@
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
 
 /// A hash instance.
+///
+/// For maximum performance, use this hasher in a larger code block compiled with SIMD target
+/// features enabled.
 #[derive(Clone, Debug)]
 pub struct AutobahnHasher {
     v0: u64x4,
@@ -259,7 +262,7 @@ impl core::hash::Hasher for AutobahnHasher {
 
 /// Hash a slice with the given key.
 ///
-/// With the `multiversion` feature, this function dispatches the optimal instruction set.
+/// This function dynamically selects the best instruction set at runtime.
 #[cfg(feature = "multiversion")]
 #[cfg_attr(docsrs, doc(cfg(feature = "multiversion")))]
 #[multiversion::multiversion(targets = "simd")]
@@ -274,7 +277,7 @@ pub fn hash_64(bytes: &[u8], key: [u64; 4]) -> u64 {
 
 /// Hash a slice with the given key.
 ///
-/// With the `multiversion` feature, this function dispatches the optimal instruction set.
+/// This function dynamically selects the best instruction set at runtime.
 #[cfg(feature = "multiversion")]
 #[cfg_attr(docsrs, doc(cfg(feature = "multiversion")))]
 #[multiversion::multiversion(targets = "simd")]
@@ -289,7 +292,7 @@ pub fn hash_128(bytes: &[u8], key: [u64; 4]) -> [u64; 2] {
 
 /// Hash a slice with the given key.
 ///
-/// With the `multiversion` feature, this function dispatches the optimal instruction set.
+/// This function dynamically selects the best instruction set at runtime.
 #[cfg(feature = "multiversion")]
 #[cfg_attr(docsrs, doc(cfg(feature = "multiversion")))]
 #[multiversion::multiversion(targets = "simd")]
