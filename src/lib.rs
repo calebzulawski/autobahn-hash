@@ -314,3 +314,48 @@ pub fn hash_256(bytes: &[u8], key: [u64; 4]) -> [u64; 4] {
     }
     hasher.finish_256(remainder)
 }
+
+/// Build `AutobahnHasher`s with random keys.
+///
+/// Like [`std::collections::hash_map::RandomState`], but for [`AutobahnHasher`].
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+#[derive(Clone, Debug)]
+pub struct RandomState {
+    key: [u64; 4],
+}
+
+#[cfg(feature = "std")]
+impl Default for RandomState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(feature = "std")]
+impl RandomState {
+    /// Constructs a new RandomState that is initialized with a random key.
+    pub fn new() -> Self {
+        use std::{
+            collections::hash_map,
+            hash::{BuildHasher, Hasher},
+        };
+        Self {
+            key: [
+                hash_map::RandomState::new().build_hasher().finish(),
+                hash_map::RandomState::new().build_hasher().finish(),
+                hash_map::RandomState::new().build_hasher().finish(),
+                hash_map::RandomState::new().build_hasher().finish(),
+            ],
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl core::hash::BuildHasher for RandomState {
+    type Hasher = AutobahnHasher;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        AutobahnHasher::new_with_key(self.key)
+    }
+}
