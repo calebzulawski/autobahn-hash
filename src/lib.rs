@@ -64,6 +64,16 @@ fn remainder(bytes: &[u8]) -> [u8; 32] {
     packet
 }
 
+fn mul_lo_hi(lo: u64x4, hi: u64x4) -> u64x4 {
+    if cfg!(all(target_arch = "aarch64", not(target_feature = "sve"))) {
+        let lo = simd_swizzle!(bytemuck::cast::<_, u32x8>(lo), [0, 2, 4, 6]);
+        let hi = simd_swizzle!(bytemuck::cast::<_, u32x8>(hi), [1, 3, 5, 7]);
+        lo.cast::<u64>() * hi.cast::<u64>()
+    } else {
+        (lo & u64x4::splat(0xffffffff)) * (hi >> u64x4::splat(32))
+    }
+}
+
 fn modular_reduction(a3_unmasked: u64, a2: u64, a1: u64, a0: u64) -> (u64, u64) {
     let a3 = a3_unmasked & 0x3fffffffffffffff;
     (
@@ -100,9 +110,9 @@ impl AutobahnHasher {
 
     fn write_simd(&mut self, packet: u64x4) {
         self.v1 += self.mul0 + packet;
-        self.mul0 ^= (self.v1 & u64x4::splat(0xffff_ffff)) * (self.v0 >> u64x4::splat(32));
+        self.mul0 ^= mul_lo_hi(self.v1, self.v0);
         self.v0 += self.mul1;
-        self.mul1 ^= (self.v0 & u64x4::splat(0xffff_ffff)) * (self.v1 >> u64x4::splat(32));
+        self.mul1 ^= mul_lo_hi(self.v0, self.v1);
         self.v0 += zipper_merge(self.v1);
         self.v1 += zipper_merge(self.v0);
     }
