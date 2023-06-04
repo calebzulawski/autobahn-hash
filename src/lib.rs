@@ -2,6 +2,22 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(unsafe_code)]
+//! A pure Rust implementation of [HighwayHash](https://github.com/google/highwayhash).
+//!
+//! A few highlights:
+//! * No `unsafe`
+//! * Fuzzed against the reference implementation
+//! * Minimal crate with few required dependencies
+//! * Portable to any SIMD instruction set (and reasonably fast without SIMD)
+//!
+//! This crate requires the `portable_simd` nightly feature.
+//!
+//! There are two optional features:
+//! * `std`: enables [`RandomState`]
+//! * `multiversion`: enables [`hash_64`] and friends, which select the optimal instruction set at
+//! runtime
+//!   * Adds the `multiversion` crate as a dependency
+//!   * Also enables the `std` feature
 
 use core::simd::{simd_swizzle, u32x8, u64x4, u8x32};
 
@@ -157,6 +173,9 @@ impl AutobahnHasher {
     ///
     /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
     /// and permuted into a 32-bit packet.
+    ///
+    /// # Panics
+    /// Panics if remainder is not less than 32 bytes.
     pub fn finish_64(mut self, remainder: &[u8]) -> u64 {
         self.finish(remainder);
         for _ in 0..4 {
@@ -174,6 +193,9 @@ impl AutobahnHasher {
     ///
     /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
     /// and permuted into a 32-bit packet.
+    ///
+    /// # Panics
+    /// Panics if remainder is not less than 32 bytes.
     pub fn finish_128(mut self, remainder: &[u8]) -> [u64; 2] {
         self.finish(remainder);
         for _ in 0..6 {
@@ -198,6 +220,9 @@ impl AutobahnHasher {
     ///
     /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
     /// and permuted into a 32-bit packet.
+    ///
+    /// # Panics
+    /// Panics if remainder is not less than 32 bytes.
     pub fn finish_256(mut self, remainder: &[u8]) -> [u64; 4] {
         self.finish(remainder);
         for _ in 0..10 {
@@ -229,7 +254,7 @@ impl core::hash::Hasher for AutobahnHasher {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         // `Hasher` requires calls to be exactly sequenced (e.g. two calls to `write` does not need
-        // to be the same as a single call two `write` with the same data concatenated).
+        // to be the same as a single call to `write` with the same data concatenated).
         // Therefore, we don't need to buffer and can simply pad bytes.
         let (bytes, remainder) = bytes.split_at(bytes.len() / 32 * 32);
         for packet in bytes.chunks(32) {
