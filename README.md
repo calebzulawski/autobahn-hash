@@ -13,3 +13,8 @@ A few highlights:
 * Portable to any SIMD instruction set (and reasonably fast without SIMD)
 
 This crate requires the `portable_simd` nightly feature.
+
+## License
+AutobahnHash is distributed under the terms of both the MIT license and the Apache License (Version 2.0).
+
+See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) for details.
