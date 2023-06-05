@@ -14,6 +14,18 @@ A few highlights:
 
 This crate requires the `portable_simd` nightly feature.
 
+## Benchmarks
+The following benchmarks were done on an Intel i7-9750H, to give an idea of the performance profile.
+These two benchmarks can help predict best- and worst-case performance.
+
+### Slices
+The HighwayHash algorithm performs best on long slices of data:
+![slice benchmark](assets/slice.png)
+
+### Non-slice data
+Worst-case performance is can be predicted with non-slice data: `struct Data(u8, u16, u32, u64);`
+![struct benchmark](assets/struct.png)
+
 ## License
 AutobahnHash is distributed under the terms of both the MIT license and the Apache License (Version 2.0).
 

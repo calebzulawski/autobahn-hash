@@ -19,22 +19,24 @@ for file in glob.glob('target/criterion/data/**/benchmark.cbor', recursive=True)
         'crate': meta['id']['function_id'],
         'size': meta['id']['throughput']['Bytes'],
         'mean': data['estimates']['mean']['point_estimate'],
+        'lower': data['estimates']['mean']['confidence_interval']['lower_bound'],
+        'upper': data['estimates']['mean']['confidence_interval']['upper_bound'],
     })
 
 df = pd.DataFrame(df)
 
+df['mean'] = df['size'] / df['mean'] # B/ns is also GB/s
+
 for ty, df in df.groupby(df.type):
     df = df.sort_values("size")
-    df['throughput'] = df['size'] / df['mean'] # B/ns is also GB/s
-    max = df['throughput'].max()
     fig = px.line(df,
         x="size",
-        y="throughput",
+        y="mean",
         color='crate',
         log_x=True,
-        range_y=[0,df['throughput'].max()],
+        range_y=[0,df['mean'].max()],
         line_shape='spline',
-        labels={'throughput': "Throughput (GB/s)", 'size': "Input Size (bytes)"},
+        labels={'mean': "Throughput (GB/s)", 'size': "Input Size (bytes)"},
         title=f"Throughput for {ty} inputs",
     )
-    fig.show()
+    fig.write_image(f"assets/{ty}.png", scale=2)

@@ -85,7 +85,7 @@ fn hasher(c: &mut Criterion) {
         let input = (0..size).map(Data::new).collect::<Vec<Data>>();
 
         group.bench_with_input(
-            BenchmarkId::new("default", size),
+            BenchmarkId::new("std", size),
             input.as_ref(),
             |b, input: &[Data]| {
                 b.iter(|| {
