@@ -23,7 +23,7 @@ The HighwayHash algorithm performs best on long slices of data:
 ![slice benchmark](assets/slice.png)
 
 ### Non-slice data
-Worst-case performance is can be predicted with non-slice data: `struct Data(u8, u16, u32, u64);`
+Worst-case performance can be predicted with non-slice data: `struct Data(u8, u16, u32, u64);`
 ![struct benchmark](assets/struct.png)
 
 ## License
