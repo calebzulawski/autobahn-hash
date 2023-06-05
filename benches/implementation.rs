@@ -21,7 +21,7 @@ fn slice(c: &mut Criterion) {
         ];
 
         group.bench_with_input(
-            BenchmarkId::new("default", size),
+            BenchmarkId::new("std", size),
             input.as_ref(),
             |b, input| {
                 b.iter(|| {
