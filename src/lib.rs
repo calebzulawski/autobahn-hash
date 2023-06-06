@@ -172,7 +172,7 @@ impl AutobahnHasher {
     /// The `remainder` bytes must be less than a packet (less than 32 bytes).
     ///
     /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
-    /// and permuted into a 32-bit packet.
+    /// and permuted into a 32-byte packet.
     ///
     /// # Panics
     /// Panics if remainder is not less than 32 bytes.
@@ -192,7 +192,7 @@ impl AutobahnHasher {
     /// The `remainder` bytes must be less than a packet (less than 32 bytes).
     ///
     /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
-    /// and permuted into a 32-bit packet.
+    /// and permuted into a 32-byte packet.
     ///
     /// # Panics
     /// Panics if remainder is not less than 32 bytes.
@@ -219,7 +219,7 @@ impl AutobahnHasher {
     /// The `remainder` bytes must be less than a packet (less than 32 bytes).
     ///
     /// Writing the remainder is notably different than `Hasher::write`.  The remainder is padded
-    /// and permuted into a 32-bit packet.
+    /// and permuted into a 32-byte packet.
     ///
     /// # Panics
     /// Panics if remainder is not less than 32 bytes.
